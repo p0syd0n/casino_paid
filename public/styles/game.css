@@ -1,0 +1,5 @@
+/* styles.css */
+h1 {
+  display: inline-block;
+  margin: 0; /* Removes default margins for a cleaner look */
+}

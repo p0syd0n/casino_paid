@@ -1,0 +1,32 @@
+{
+  "name": "casino",
+  "version": "1.0.0",
+  "description": "we love gambling!!11!!!1!",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "node ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/p0syd0n/casino.git"
+  },
+  "keywords": [
+    "gambling",
+    "git",
+    "21",
+    "blackjack",
+    "poker"
+  ],
+  "author": "p0syd0n onyx",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/p0syd0n/casino/issues"
+  },
+  "homepage": "https://github.com/p0syd0n/casino#readme",
+  "dependencies": {
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "express-session": "^1.18.1"
+  }
+}
