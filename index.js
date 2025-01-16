@@ -30,12 +30,13 @@ app.get("/", (req, res) => {
 
 app.get("/start", (req, res) => {
   return res.redirect("/game?amount="+(req.query.amount ? req.query.amount : 50));
-})
+});
 
 app.get("/game", (req, res) => {
   res.render("game", {amount: (req.query.amount ? req.query.amount : 50)});
-})
+});
 
 app.listen(PORT, () => {
   console.log("listening on port " + PORT);
 });
+
