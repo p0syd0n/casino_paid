@@ -2,11 +2,33 @@
   <head>
     <title>Blackjack!!</title>
     <link rel="stylesheet" href="styles/game.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+
   </head>
-  <body>
-    <h1>Your bank: </h1>
+  <body onload="main()">
+    <h1 class="bank">Your bank: <span id="amount"><%= amount %></span></h1>
+    <script>
+      // Get query parameters
+      const params = new URLSearchParams(window.location.search);
+      const user = params.get("amount"); // Get the value of 'user'
+
+      if (user) {
+          document.getElementById("amount").textContent = user;
+      }
+  </script>
+    <!-- <div id="buttonContainer"> -->
     <canvas id="gameCanvas" width="800" height="600"></canvas>
-    <h1 id="amount"><%= amount %></h1>
+      <menu id="controls">
+        <button class="button" id="hit/matchbet">Match</button>
+        <button class="button" id="stand/doublebet">Double</button>
+        <button class="button" id="split/minimumbet">Minimum</button>
+        <button class="button" id="double/start">Start</button>
+      </menu>
+      <input id="bet" class="betBox" name="amount" size="40">Bet Amount</input>
+      <p class="dealerText" id="dealerText"></p>
+    <!-- </div> -->
+    
   </body>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src='scripts/game.js'></script>
 </html>

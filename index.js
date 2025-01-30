@@ -18,8 +18,10 @@ const sessionMiddleware = session({
   resave: false,
   saveUninitialized: true,
   cookie: { secure: false }
-})
+});
+
 app.use(sessionMiddleware);
+
 app.get("/", (req, res) => {
   console.log("e")
   if (req.session.amount) {

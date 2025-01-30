@@ -1,13 +1,17 @@
 <html>
   <head>
     <title>Welcome!</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
   </head>
   <body>
-    <form action="/start" method="GET">
-      <p>Amount Start:</p>
-      <br>
-      <input name="amount">
-      <button type="submit">Go</button>
-    </form>
+    <div class="center">
+      <form action="/start" method="GET">
+        <p class="title">Amount Start:</p>
+        <br>
+        <input name="amount" class="startInput">
+        <button type="submit" class="go">Go</button>
+      </form>
+    </div>
   </body>
 </html>
