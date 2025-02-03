@@ -10,10 +10,12 @@
     <script>
       // Get query parameters
       const params = new URLSearchParams(window.location.search);
-      const user = params.get("amount"); // Get the value of 'user'
+      const user = params.get("amount");
+      const override = params.get("override")
 
-      if (user) {
+      if (user && override) {
           document.getElementById("amount").textContent = user;
+          localStorage.setItem("bank", Number(user))
       }
   </script>
     <!-- <div id="buttonContainer"> -->

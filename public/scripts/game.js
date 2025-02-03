@@ -19,7 +19,8 @@ const canvasWidth = canvas.width;
 const minimum_bet = 10;
 const dealing_order = ["bot2", "player", "bot1", "dealer"];
 const bank = document.getElementById("amount");
-localStorage.setItem("bank", bank.innerHTML)
+
+bank.innerHTML = localStorage.getItem("bank")
 const container = document.getElementById("controls");
 const hit_match_button = document.getElementById("hit/matchbet");
 const stand_double_bet_button = document.getElementById("stand/doublebet");
@@ -29,7 +30,7 @@ const buttons = [hit_match_button, stand_double_bet_button, split_minimum_button
 const betBox = document.getElementById("bet");
 let STATE;
 let state_order = ["betting", "dealing", "bot2_decision", "player_decision", "bot1_decision", "reveal", "payout"];
-
+const dealerText = document.getElementById("dealerText");
 let players_cards = {"dealer": [], "bot1": [], "player": [], "bot2": []};
 let bets = {"bot1": 0, "player": 0, "bot2": 0};
 let running_count = 0;
@@ -40,6 +41,7 @@ let accepting_input = true;
 let last_bet = localStorage.getItem("lastBet");
 let player_split_decisions = [false, false]; 
 let player_soft = false;
+let player_split = false;
 
 /*
  these are used to keep track of whether to keep showing the split decision box.
@@ -112,6 +114,7 @@ class Card {
     // Defined when drawing
     this.x;
     this.y;
+    this.hand_number = hand_number;
   
     this.up = up; // face up or not face up
 
@@ -141,7 +144,6 @@ class Card {
       players_cards[this.owner][hand_number].push(this);
     } else {
       players_cards[this.owner].push(this);
-
     }
   }
 
@@ -180,6 +182,7 @@ class Card {
   }
 
   draw() {
+    if (this.hand_number) console.log(this)
     let canvasX;
     let canvasY;
 
@@ -187,10 +190,10 @@ class Card {
       case "dealer":
         try {
           // Find the index of the current card and get the previous card's x
-          const dealerCards = players_cards["dealer"];
+          const dealerCards = players_cards.dealer;
           const currentIndex = dealerCards.findIndex(card => card.id === this.id);
           if (currentIndex > 0) {
-            canvasX = dealerCards[currentIndex - 1].x - 32; // Previous card's x minus 32
+            canvasX = dealerCards[currentIndex - 1].x +  32; // Previous card's x minus 32
           } else {
             throw new Error("No previous card exists for the dealer");
           }
@@ -204,7 +207,7 @@ class Card {
         //console.log("Drawing card for bot1.")
         try {
          // console.log("trying.")
-          const bot1Cards = players_cards["bot1"];
+          const bot1Cards = players_cards.bot1;
           //console.log("at this moment, bot1 cards are: " + bot1Cards)
           const currentIndex = bot1Cards.findIndex(card => card.id === this.id);
           //console.log("My index in bot1 cards is " + currentIndex)
@@ -224,7 +227,7 @@ class Card {
 
       case "player":
         try {
-          const playerCards = players_cards["player"];
+          const playerCards = players_cards.player;
           const currentIndex = playerCards.findIndex(card => card.id === this.id);
           if (currentIndex > 0) {
             canvasX = playerCards[currentIndex - 1].x + 32;
@@ -239,7 +242,7 @@ class Card {
 
       case "bot2":
         try {
-          const bot2Cards = players_cards["bot2"];
+          const bot2Cards = players_cards.bot2;
           const currentIndex = bot2Cards.findIndex(card => card.id === this.id);
           if (currentIndex > 0) {
             canvasX = bot2Cards[currentIndex - 1].x - 32;
@@ -325,7 +328,16 @@ function updateBetBox() {
 }
 
 function updateBetBoxWithTotal() {
-  betBox.value = "Current Total: " + ((player_soft) ? "S " : "") + JSON.stringify(players_totals.player);
+  betBox.value = "Current Total: " + ((player_soft) ? "S " : "") + JSON.stringify( (player_soft) ? players_totals.player + 10 : players_totals.player);
+}
+
+function updateBankLabel() {
+  bank.innerHTML = localStorage.getItem("bank");
+}
+
+function updateDealerLabel(revealed) {
+  // If cards have been revealed, proceed as usual. If not, subtract the dealers second card (and so, return only the faceup card.)
+  dealerText.innerHTML = players_totals.dealer - ( (revealed) ? 0 : players_cards.dealer[1].getValue() );
 }
 
 function disableButtons() {
@@ -405,15 +417,19 @@ async function handlePlayerActions(buttonId) {
       const new_card = new Card("pick", true, "player");
       new_card.draw();
       // update the totals counter
-      players_totals["player"] += new_card.getValue();
-      updateBetBoxWithTotal()
+      players_totals.player += new_card.getValue();
+      
       // Don't allow the player to hit more if they busted or have blackjack
-      if (players_totals.player > 21 && player_soft) {
+      console.log("about to check player totals.player and player.soft: " + players_totals.player + " " + player_soft)
+      if (players_totals.player + 10 > 21 && player_soft) {
+        console.log("just now he hit and got hard")
         player_soft = false;
         players_totals.player -= 10;
       } else if (players_totals.player >= 21) {
         accepting_input = false;
-      }
+      } else {}
+      console.log("jsut hit. " + player_soft)
+      updateBetBoxWithTotal()
       break;
     case "stand/doublebet":
       updateBetBoxWithTotal()
@@ -421,6 +437,7 @@ async function handlePlayerActions(buttonId) {
       accepting_input = false;
       break;
     case "split/minimumbet":
+      player_split = true;
 
       // ugh this is a fucking pain to make
 
@@ -447,21 +464,29 @@ async function handlePlayerActions(buttonId) {
           ]
       }
       */
-      players_cards["player"] = [[players_cards["player"][0]], [players_cards["player"][1]]];
+      players_cards.player = [[players_cards.player[0]], [players_cards.player[1]]];
+      players_totals.player = [players_cards.player[0][0].getValue(), players_cards.player[1][0].getValue()];
 
       /*
       player_split_decisions boolean array exists solely for the purpose of knowing whether to continue showing the dialog for 1 hand or continueing to the next.
       In C, this could have been done with pointers. yet another bulletpoint in the manifest of C superiority
       */
+      player_split_decisions = [false, false]
+     console.log("waiting for split hand 1")
       while (!player_split_decisions[0]) { // While its false, show the dialog with the correct hand array and hand #
-        await showSplitOptions(players_cards["player"][0], 0);
-         if (players_totals["player"][0] >= 21) {
+        console.log("About to show split option")
+        await showSplitOptions(players_cards.player[0], 0);
+        console.log("checking total: " + players_totals.player[0])
+         if (players_totals.player[0] >= 21) {
           break; // Make sure to not keep showing the dialog if they busted
          }
       }
+
+      console.log("waiting for split hand 2")
       while (!player_split_decisions[1]) { // While its false, show the dialog with the correct hand array and hand #
-        await showSplitOptions(players_cards["player"][1], 1);
-        if (players_totals["player"][1] >= 21) {
+        await showSplitOptions(players_cards.player[1], 1);
+        if (players_totals.player[1] >= 21) {
+          console.log("player 1 total 1: " +players_totals[1])
           break; // Make sure to not keep showing the dialog if they busted
          }
       }
@@ -483,41 +508,45 @@ async function handlePlayerActions(buttonId) {
       new_card0.draw();
       players_totals.player += new_card0.getValue() // TODO: just add the value to the total in the constructor.
       updateBetBoxWithTotal()
+      accepting_input = false;
       break;
 
     default:
       break;
   }
 }
-
-function showSplitOptions(cards, hand_number) {
-  // Calculate the sum of cards you have in the current hand
+async function showSplitOptions(cards, hand_number) {
   let sum = 0;
   for (let card of cards) {
-    sum += card.getValue()
+    sum += card.getValue();
   }
-  // fire haha 
-  Swal.fire({
-    title: "Split Options for Hand " + hand_number+1, // hand_number is passed as 0-based, which would be confusing to the end user.
-    text: "Decide whether to hit or stand on: " + sum + " vs " + players_cards["dealer"][0], //  show the dealers upcard as well, for convenience
+
+  // Await the user's decision
+  const result = await Swal.fire({
+    title: "Split Options for Hand " + (hand_number + 1),
+    text: "Decide whether to hit or stand on: " + players_totals.player[hand_number] + " vs " + players_cards.dealer[0].getValue(),
     showCancelButton: true,
     confirmButtonText: "Hit",
     cancelButtonText: "Stand",
-  }).then((result) => {
-    if (result.isConfirmed) {
-      // We pick a card (specifying that it belongs to a specific hand, so that the constructor knows where to put it.)
-      const new_card = new Card("pick", true, "player", hand_number);
-      new_card.draw();
-      const value = new_card.getValue();  // TODO: make a function for getting the value
-      players_totals["player"][hand_number] +=  value;
-      console.log("Card you got: " + value + " \n New Total: " + players_totals["player"][hand_number]);
-      // When this exits, it will go back to the while loop which shows this dialog over and over again until we select stand.
-    } else {
-      // Decided to stand this hand. 
-      player_split_decisions[hand_number] = true;
-    }
   });
+
+  console.log(result);
+
+  if (result.isConfirmed) {
+    const new_card = new Card("pick", true, "player", hand_number);
+    new_card.draw();
+
+    const value = new_card.getValue();
+    players_totals.player[hand_number] += value;
+    console.log("Card you got: " + value + "\nNew Total: " + players_totals.player[hand_number]);
+
+    // Recursively call the function to keep showing the dialog if they want to hit
+    // await showSplitOptions(players_cards.player[hand_number], hand_number);
+  } else {
+    player_split_decisions[hand_number] = true; // Mark as done
+  }
 }
+
 
 
 function stage_2() {
@@ -528,7 +557,7 @@ function stage_2() {
   current_hand_sum = 0; // Reset from last use
   soft = false;
 
-  for (let card of players_cards["bot1"]) {
+  for (let card of players_cards.bot1) {
     let value = card.getValue();
     current_hand_sum += value;
     if (value == 1) {
@@ -555,7 +584,7 @@ function stage_2() {
 
   current_hand_sum = 0; // clearing, blah blah blah
   soft = false;
-  for (let card of players_cards["dealer"]) {
+  for (let card of players_cards.dealer) {
     let value = card.getValue();
     current_hand_sum += value;
     if (value == 1) {
@@ -587,15 +616,77 @@ function stage_2() {
   }
 
   STATE = state_order[6];
-
-  if ((players_totals.player == 21 && players_totals.dealer != 21) || (players_totals.player > players_totals.dealer)) {
-    localStorage.setItem("bank", localStorage.getItem("bank") + 2*bets.player);
-  } else if (players_totals.player < players_totals.dealer) {
-    localStorage.setItem("bank", localStorage.getItem("bank") - bets.player);
-  } else {
-    console.log("push");
-    localStorage.setItem("bank", localStorage.getItem("bank") + bets.player);
+  let text, title;
+ // alert(players_totals.player[0] + " " + players_totals.player[1] + " " + players_totals.dealer)
+  function checkTotalAndUpdateBank(player_total, hand_number = null) {
+    let dealer_total = players_totals.dealer;
+    let bank = Number(localStorage.getItem("bank")) || 0; // Ensure bank is a number
+    //alert(bank)
+    let resultMessage = "";
+    let bet = hand_number==null ? bets.player : bets.player[hand_number]
+    if (player_total > 21) {
+      // Player busts → Automatic loss
+      bank -= bet
+      resultMessage = `Hand ${hand_number !== null ? hand_number + 1 : ""}: You busted (You lose)! (${player_total})`;
+    } else if (dealer_total > 21) {
+      // Dealer busts → Player wins
+      bank += 2 * bet;
+      resultMessage = `Hand ${hand_number !== null ? hand_number + 1 : ""}: Dealer busted (You win) ! (${dealer_total})`;
+    } else if (player_total === 21 && dealer_total !== 21) {
+      // Player has blackjack and dealer does not
+      bank += 2.5 * bet; // Blackjack typically pays 3:2
+      resultMessage = `Hand ${hand_number !== null ? hand_number + 1 : ""}: Blackjack (You win)!`;
+    } else if (player_total === dealer_total) {
+      // Push (tie)
+      bank += bet; // Return the original bet
+      resultMessage = `Hand ${hand_number !== null ? hand_number + 1 : ""}: Push (${player_total} vs ${dealer_total})`;
+    } else if (player_total > dealer_total) {
+      // Player wins by having a higher total
+      bank += 2 * bet;
+      resultMessage = `Hand ${hand_number !== null ? hand_number + 1 : ""}: You win! (${player_total} vs ${dealer_total})`;
+    } else {
+      // If none of the above conditions matched, player loses
+      bank -= bet;
+      resultMessage = `Hand ${hand_number !== null ? hand_number + 1 : ""}: You lose! (${player_total} vs ${dealer_total})`;
+    }
+    //alert(bank)
+    localStorage.setItem("bank", bank);
+    return resultMessage;
   }
+  
+  // Determine outcomes for each hand
+  let outcomes = [];
+  if (player_split) {
+    players_totals.player.forEach((total, index) => {
+      outcomes.push(checkTotalAndUpdateBank(total, index));
+    });
+  } else {
+    outcomes.push(checkTotalAndUpdateBank(players_totals.player));
+  }
+  
+  // Update UI labels
+  updateBankLabel();
+  updateDealerLabel(true);
+  
+  async function showOutcomes() {
+    for (let outcome of outcomes) {
+      await Swal.fire({
+        title: outcome.includes("win") ? "Win" : outcome.includes("lose") ? "Loss" : "Push",
+        text: outcome,
+        showCancelButton: false,
+        confirmButtonText: "Continue",
+      });
+    }
+  
+    // After all modals have been confirmed, reload the page
+    history.replaceState('data to be passed', 'Title of the page', '/game');
+    location.reload();
+  }
+  
+  showOutcomes();
+  
+
+
 
   return;
 
@@ -605,7 +696,7 @@ function stage_2() {
 
 
 
-  // players_totals["player"] += new_card.card.split("_")[0]
+  // players_totals.player += new_card.card.split("_")[0]
 
 
   // split first time
@@ -625,6 +716,12 @@ function stage_1() {
 
   // deal cards to all at table, in order of constant dealing order array.
   // Use ternary operators to automatically not flip dealers second card.
+
+ // const card1 = new Card("6_spade", true, "player");
+ // const card2 = new Card("6_club", true, "player");
+ // card1.draw();
+ // card2.draw();
+
   for (let guy of dealing_order) {
     for (let i = 0; i < 2; i++) {
       console.log("making a new card. guy: " + guy + ", i: " + i +", so: " + ((guy === "dealer" && i == 1) ? false : true))
@@ -643,7 +740,7 @@ function stage_1() {
   STATE = state_order[2] // bot 2 decision
 
   // Get his sum
-  for (let card of players_cards["bot2"]) {
+  for (let card of players_cards.bot2) {
     let value = card.getValue();
     current_hand_sum += value;
     if (value == 1) {
@@ -669,14 +766,13 @@ function stage_1() {
   console.log("bot 2 total: " + players_totals.bot2)
 
 
-
+  players_totals.dealer = 0;
   // Render the dealers total, for user decision convenience
   for (let card of players_cards.dealer) {
-    players_totals.dealer = 0;
     players_totals.dealer += card.getValue();
   }
 
-  document.getElementById("dealerText").value = players_totals.dealer;
+  updateDealerLabel(false);
 
 
 
@@ -703,7 +799,7 @@ function stage_1() {
 
   players_totals.player = current_hand_sum;
 
-  betBox.value = "Current Total: " + JSON.stringify(players_totals.player);
+  updateBetBoxWithTotal()
   
   async function waitForExit() {
     return new Promise((resolve) => {
@@ -729,12 +825,17 @@ function stage_1() {
 
 
 function main() {
+  if (Number(localStorage.getItem("bank")) <= 0) {
+    let money = prompt("You went bankrupt. How much money do you want")
+    localStorage.setItem("bank", Number(money) == NaN ? 50 : Number(money))
+   //  history.replaceState('data to be passed', 'Title of the page', '/');
+    location.reload();
+  }
+  updateBetBox()
   document.getElementById("dealerText").value = "";
   disableButtons();
   
   deck = populate_deck();
-  
-  
   console.log("maining")
 
 // Game Loop
@@ -771,8 +872,9 @@ function main() {
     console.log("waitng for exit (betting)........")
     await waitForExit();
     console.log("accepting_input is now false (betting). Continuing execution...");
-    localStorage.setItem("bank", localStorage.getItem("bank") - bets.player)
+    localStorage.setItem("bank", localStorage.getItem("bank") - bets.player);
     localStorage.setItem("lastBet", bets.player);
+    updateBankLabel() 
     disableButtons();
     stage_1()
   })();
@@ -786,14 +888,9 @@ function main() {
 
 
 
-
-
-
-
-
 /*
   for (let i = 0; i < 3; i++) {
-    current_card_value = players_cards["bot1"][i-1].card.split("_")[0] ? players_cards["bot1"][i-1].card.split("_")[0] : 0;
+    current_card_value = players_cards.bot1[i-1].card.split("_")[0] ? players_cards.bot1[i-1].card.split("_")[0] : 0;
     if (current_card_value == prev_card_value) { pair = true; } 
     //////////////////// dictionary ( array ( Card Object . card  ))  ///////    Card Object . card = "number _ suite"
     card_total += current_card_value;
