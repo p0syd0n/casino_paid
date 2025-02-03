@@ -11,8 +11,8 @@ const CARD_HEIGHT = 225;
 
 // const SCALED_CARD_WIDTH = (CARD_WIDTH * canvas.width)/1350
 // const SCALED_CARD_HEIGHT = (225*canvas.height)/2540
-const SCALED_CARD_WIDTH = 0.5*CARD_WIDTH
-const SCALED_CARD_HEIGHT = 0.5*CARD_HEIGHT
+const SCALED_CARD_WIDTH = 0.3*CARD_WIDTH
+const SCALED_CARD_HEIGHT = 0.6*CARD_HEIGHT
 const BETWEEN_CARDS = 32;
 const canvasHeight = canvas.height;
 const canvasWidth = canvas.width;
@@ -237,7 +237,7 @@ class Card {
         } catch (e) {
           canvasX = 0.5 * canvasHeight;
         }
-        canvasY = canvasHeight - 0.38 * canvasHeight;
+        canvasY = canvasHeight - 0.5 * canvasHeight;
         break;
 
       case "bot2":
